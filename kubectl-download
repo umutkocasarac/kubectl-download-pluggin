@@ -55,6 +55,10 @@ EOF
 
 function download_file() {
   pods=($(kubectl -n ${namespace} get pods --selector=${selector} -o jsonpath='{.items[*].metadata.name}' 2>/dev/null))
+  if [[ -z "${pods}" ]]; then
+    echo "Pods couldn't found for ${selector} in ${namespace}"
+    exit 1
+  fi
   arrPods=(`echo ${pods}`);
   if [[ $? -ne 0 ]];then
     echo "error: Unable to trigger a cp on selector ${selector}"
