@@ -1,0 +1,73 @@
+#!/bin/bash
+#
+
+
+selector=""
+namespace="default"
+file=""
+
+function main() {
+  validate_arguments "$@"
+  download_file
+}
+
+function validate_arguments() {
+  selector="$1"
+  shift
+
+  while [ $# -gt 0 ]
+  do
+    case $1 in
+      --namespace)
+        namespace=$2
+        shift
+        ;;
+      --file)
+        file=$2
+        shift
+        ;; 
+      --)
+        shift
+        break
+        ;;
+      *)
+    esac
+    shift
+  done
+
+  if [[ -z "${selector}" ]]; then
+    help 1
+  fi
+  if [[ -z "${file}" ]]; then
+    help 1
+  fi
+
+}
+
+function help() {
+  cat << 'EOF'
+Usage: kubectl download $selector --namespace NAMESPACE --file $filePath
+Usage: kubectl download app=nginx --namespace nginx --file /var/log/nginx.log
+
+EOF
+  exit $1
+}
+
+function download_file() {
+  pods=($(kubectl -n ${namespace} get pods --selector=${selector} -o jsonpath='{.items[*].metadata.name}' 2>/dev/null))
+  arrPods=(`echo ${pods}`);
+  if [[ $? -ne 0 ]];then
+    echo "error: Unable to trigger a cp on selector ${selector}"
+    exit 1
+  fi
+  filename=$(basename -- "$file")
+  for pod in "${pods[@]}"
+  do
+    echo "Downloading file ${filename} from ${pods}"
+    kubectl -n ${namespace} cp  ${pod}:${file} "${pod}-${filename}"
+  done
+
+  echo "The file is downloaded to ${pods}-${filename}"
+}
+
+main "$@"
